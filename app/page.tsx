@@ -1,65 +1,79 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import axios from "axios";
 
-export default function Home() {
+export default function FlowerAI() {
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [result, setResult] = useState<{ flower: string; confidence: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setResult(null);
+    }
+  };
+ 
+  const identifyFlower = async () => {
+    if (!selectedImage) return;
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", selectedImage);
+
+    try {
+      const response = await axios.post("http://localhost:8080/api/identify", formData);
+      setResult(response.data);
+    } catch (error) {
+      console.error(error);
+      alert("Error: Is Spring Boot running on Port 8080?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
+        <h1 className="text-4xl font-black text-slate-800 text-center mb-2 tracking-tight">
+          Flower<span className="text-emerald-500">Scan</span>
+        </h1>
+        <p className="text-slate-500 text-center mb-8 font-medium">AI Plant Identification</p>
+
+        <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 mb-6 bg-slate-50/50">
+          {previewUrl ? (
+            <img src={previewUrl} alt="Preview" className="w-full h-64 object-cover rounded-xl shadow-inner" />
+          ) : (
+            <div className="h-64 flex items-center justify-center text-slate-400 font-medium text-center">
+              Select a flower image <br/> to begin
+            </div>
+          )}
+          <input 
+            type="file" 
+            onChange={handleFileChange} 
+            className="mt-4 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+            accept="image/*"
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        <button 
+          onClick={identifyFlower}
+          disabled={!selectedImage || loading}
+          className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold text-xl hover:bg-emerald-600 transition-all disabled:bg-slate-200"
+        >
+          {loading ? "AI is Analyzing..." : "Identify Species"}
+        </button>
+
+        {result && (
+          <div className="mt-8 p-6 bg-emerald-50 rounded-2xl border-2 border-emerald-100">
+            <h3 className="text-emerald-600 font-bold uppercase text-xs tracking-widest mb-1">AI Match Found</h3>
+            <p className="text-4xl font-black text-slate-800">{result.flower}</p>
+            <p className="text-emerald-700 font-bold mt-2">Confidence: {result.confidence}</p>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
